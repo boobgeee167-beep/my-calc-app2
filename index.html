@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>حاسبة توصيات الساعي للكريبتو</title>
+  <!-- مكتبة تلجرام الرسمية -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- مكتبة Tailwind CSS للتصميم العصري -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- خط تجوال العربي -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+    .tg-card {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+    }
+    .tg-input {
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      color: #ffffff;
+    }
+    .tg-input:focus {
+      border-color: #38bdf8;
+      outline: none;
+    }
+    .tab-btn {
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background-color: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+    .toast {
+      visibility: hidden;
+      min-width: 200px;
+      background-color: #10b981;
+      color: #fff;
+      text-align: center;
+      border-radius: 9999px;
+      padding: 10px 16px;
+      position: fixed;
+      z-index: 50;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-weight: bold;
+      font-size: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .toast.show {
+      visibility: visible;
+      animation: fadein 0.3s, fadeout 0.5s 2s;
+    }
+    @keyframes fadein {
+      from { bottom: 0; opacity: 0; }
+      to { bottom: 30px; opacity: 1; }
+    }
+    @keyframes fadeout {
+      from { bottom: 30px; opacity: 1; }
+      to { bottom: 0; opacity: 0; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 selection:bg-sky-500 selection:text-white pb-8">
+
+  <!-- النافذة التفاعلية للنسخ -->
+  <div id="toast" class="toast">تم نسخ الكليشة بنجاح! 📋</div>
+
+  <!-- شاشة الحظر للمستخدمين غير المصرح لهم -->
+  <div id="authLockCard" class="hidden w-full max-w-md mx-auto my-auto tg-card rounded-2xl p-6 text-center space-y-3 shadow-2xl border-rose-500/30">
+    <div class="inline-flex items-center justify-center p-4 bg-rose-500/10 rounded-full text-rose-500 border border-rose-500/20 mb-2">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10m12-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+    </div>
+    <h2 class="text-lg font-bold text-rose-400">⚠️ الوصول محظور</h2>
+    <p class="text-xs text-gray-400 leading-relaxed">عذراً، هذا التطبيق مخصص لأعضاء محددين فقط ولا تملك صلاحية لاستخدامه.</p>
+  </div>
+
+  <!-- التطبيق الرئيسي -->
+  <div id="appContainer" class="w-full max-w-md mx-auto space-y-4">
+    
+    <!-- الهيدر والترويسة -->
+    <div class="text-center space-y-1">
+      <div class="inline-flex items-center justify-center p-3 bg-sky-500/10 rounded-2xl mb-1 border border-sky-500/20 shadow-lg">
+        <span class="text-2xl">🪙</span>
+      </div>
+      <h1 class="text-xl font-extrabold text-white tracking-wide">الساعي للكريبتو ★★★</h1>
+      <p class="text-xs text-sky-400 font-semibold">حاسبة مولّد التوصيات المتقدمة 🚀</p>
+    </div>
+
+    <!-- كارت المدخلات والخيارات -->
+    <div class="tg-card rounded-2xl p-5 space-y-4 shadow-xl">
+      
+      <!-- اسم العملة والسعر -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- اسم العملة -->
+        <div class="space-y-1">
+          <label class="block text-xs font-semibold text-gray-300">رمز العملة</label>
+          <input type="text" id="symbol" placeholder="مثال: BTC" uppercase
+                 class="tg-input w-full p-3 rounded-xl text-base font-bold transition-all text-center uppercase placeholder-gray-600">
+        </div>
+
+        <!-- سعر الدخول -->
+        <div class="space-y-1">
+          <label class="block text-xs font-semibold text-gray-300">سعر الدخول الحالي</label>
+          <input type="number" step="any" id="entryPrice" placeholder="مثال: 75000" 
+                 class="tg-input w-full p-3 rounded-xl text-base font-bold transition-all text-center dir-ltr placeholder-gray-600">
+        </div>
+      </div>
+
+      <!-- اختيار النمط -->
+      <div class="space-y-1.5 pt-1">
+        <label class="block text-xs font-semibold text-gray-300">نمط التوصية (النسب الحسابية)</label>
+        <div class="grid grid-cols-3 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+          <button type="button" onclick="setMode('normal')" id="btn-normal" 
+                  class="tab-btn active py-2 text-xs font-bold rounded-lg text-gray-400 border border-transparent">
+            عادي
+          </button>
+          <button type="button" onclick="setMode('high')" id="btn-high" 
+                  class="tab-btn py-2 text-xs font-bold rounded-lg text-gray-400 border border-transparent">
+            عالي
+          </button>
+          <button type="button" onclick="setMode('custom')" id="btn-custom" 
+                  class="tab-btn py-2 text-xs font-bold rounded-lg text-gray-400 border border-transparent">
+            مخصص ✨
+          </button>
+        </div>
+      </div>
+
+      <!-- قسم المدخلات المخصصة (يظهر فقط عند اختيار مخصص) -->
+      <div id="custom-section" class="hidden space-y-3 pt-2 border-t border-slate-700/60 animate-fade-in">
+        <div class="text-xs font-bold text-sky-400">تعديل نسب الأهداف المخصصة (%):</div>
+        <div class="grid grid-cols-5 gap-1.5 text-center dir-ltr">
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">هدف 1</span>
+            <input type="number" step="any" id="c_t1" value="2.0" class="tg-input w-full p-1.5 text-xs text-center rounded-lg font-bold">
+          </div>
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">هدف 2</span>
+            <input type="number" step="any" id="c_t2" value="4.0" class="tg-input w-full p-1.5 text-xs text-center rounded-lg font-bold">
+          </div>
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">هدف 3</span>
+            <input type="number" step="any" id="c_t3" value="6.0" class="tg-input w-full p-1.5 text-xs text-center rounded-lg font-bold">
+          </div>
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">هدف 4</span>
+            <input type="number" step="any" id="c_t4" value="10.0" class="tg-input w-full p-1.5 text-xs text-center rounded-lg font-bold">
+          </div>
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">الرئيسي</span>
+            <input type="number" step="any" id="c_tl" value="15.0" class="tg-input w-full p-1.5 text-xs text-center rounded-lg font-bold">
+          </div>
+        </div>
+
+        <div class="text-xs font-bold text-rose-400 pt-1">تعديل وقف الخسارة (%):</div>
+        <div class="grid grid-cols-2 gap-3 dir-ltr">
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">إغلاق شمعة 4H (-)</span>
+            <input type="number" step="any" id="c_sl_candle" value="3.5" class="tg-input w-full p-2 text-xs text-center rounded-lg font-bold">
+          </div>
+          <div>
+            <span class="block text-[10px] text-gray-400 mb-1">وقف لحظي (-)</span>
+            <input type="number" step="any" id="c_sl_instant" value="5.0" class="tg-input w-full p-2 text-xs text-center rounded-lg font-bold">
+          </div>
+        </div>
+      </div>
+
+      <!-- زر توليد التوصية -->
+      <button onclick="generateRecommendation()" 
+              class="w-full py-3.5 rounded-xl font-extrabold text-white text-base bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-lg shadow-sky-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+        <span>توليد كليشة التوصية</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- كارت النتيجة والمعاينة -->
+    <div id="resultCard" class="tg-card rounded-2xl p-4 space-y-3 shadow-xl hidden border-sky-500/30">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+        <span class="text-xs text-sky-400 font-bold">معاينة الكليشة الناتجة</span>
+        <span class="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/20 font-bold" id="modeBadge">نمط عادي</span>
+      </div>
+
+      <!-- صندوق النص المنسق -->
+      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs font-mono whitespace-pre-wrap text-gray-200 dir-rtl leading-relaxed overflow-x-auto select-all max-h-80" id="outputTemplate">
+      </div>
+
+      <!-- أزرار التفاعل -->
+      <div class="grid grid-cols-1 gap-2 pt-1">
+        <button onclick="copyTemplate()" 
+                class="w-full py-3 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-500 text-white text-sm shadow-lg shadow-emerald-600/20 active:scale-95 transition flex items-center justify-center gap-2">
+          <span>نسخ الكليشة جاهزة 📋</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // قائمة الأيدي المسموح لها بالاستخدام
+    const allowedIds = ["8477440923", "7536915802", "8298463733"];
+
+    // تهيئة تلجرام والتحقق من الصلاحية
+    let tg = window.Telegram ? window.Telegram.WebApp : null;
+    
+    window.addEventListener('DOMContentLoaded', () => {
+      if (tg) {
+        tg.expand();
+        const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+        
+        // إذا كان التطبيق مفتوحاً داخل تلجرام، نفحص الـ ID
+        if (user && user.id) {
+          const userIdStr = user.id.toString();
+          if (!allowedIds.includes(userIdStr)) {
+            // حظر المستخدم غير المصرح له
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('authLockCard').classList.remove('hidden');
+            return;
+          }
+        }
+      }
+    });
+
+    let currentMode = 'normal';
+
+    // الأنماط والثوابت
+    const presets = {
+      normal: {
+        t1: 2.0, t2: 4.0, t3: 6.0, t4: 10.0, tl: 15.0,
+        sl_candle: 3.5, sl_instant: 5.0,
+        name: 'نمط عادي'
+      },
+      high: {
+        t1: 5.0, t2: 10.0, t3: 15.0, t4: 20.0, tl: 30.0,
+        sl_candle: 5.0, sl_instant: 7.0,
+        name: 'نمط عالي'
+      }
+    };
+
+    // تغيير النمط (عادي / عالي / مخصص)
+    function setMode(mode) {
+      currentMode = mode;
+
+      // تحديث الأزرار
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`btn-${mode}`).classList.add('active');
+
+      // إظهار أو إخفاء قسم المخصص
+      const customSection = document.getElementById('custom-section');
+      if (mode === 'custom') {
+        customSection.classList.remove('hidden');
+      } else {
+        customSection.classList.add('hidden');
+      }
+
+      // إذا كانت النتيجة معروضة، نحسب مجدداً
+      if (!document.getElementById('resultCard').classList.contains('hidden')) {
+        generateRecommendation();
+      }
+    }
+
+    // تنسيق ذكي لعدد الخانات العشرية حسب السعر
+    function smartFormat(num) {
+      if (isNaN(num)) return "0.00";
+      if (num >= 1) {
+        return num.toFixed(2);
+      } else if (num < 1 && num >= 0.01) {
+        return num.toFixed(4);
+      } else {
+        return num.toFixed(6);
+      }
+    }
+
+    // جلب قيم النسب حسب النمط المحدد
+    function getRates() {
+      if (currentMode === 'normal') {
+        return presets.normal;
+      } else if (currentMode === 'high') {
+        return presets.high;
+      } else {
+        // مخصص
+        return {
+          t1: parseFloat(document.getElementById('c_t1').value) || 0,
+          t2: parseFloat(document.getElementById('c_t2').value) || 0,
+          t3: parseFloat(document.getElementById('c_t3').value) || 0,
+          t4: parseFloat(document.getElementById('c_t4').value) || 0,
+          tl: parseFloat(document.getElementById('c_tl').value) || 0,
+          sl_candle: parseFloat(document.getElementById('c_sl_candle').value) || 0,
+          sl_instant: parseFloat(document.getElementById('c_sl_instant').value) || 0,
+          name: 'نمط مخصص'
+        };
+      }
+    }
+
+    // دالة توليد التوصية الرئيسية
+    function generateRecommendation() {
+      const symbolInput = document.getElementById('symbol').value.trim();
+      const entryPriceInput = parseFloat(document.getElementById('entryPrice').value);
+
+      if (!symbolInput) {
+        alert('الرجاء إدخال رمز العملة (مثال: BTC)');
+        return;
+      }
+
+      if (isNaN(entryPriceInput) || entryPriceInput <= 0) {
+        alert('الرجاء إدخال سعر دخول صحيح');
+        return;
+      }
+
+      const symbol = symbolInput.toUpperCase();
+      const entryPrice = entryPriceInput;
+      const rates = getRates();
+
+      // حساب منطقة الدخول الثابتة (-1% إلى +1%)
+      const entryMin = smartFormat(entryPrice * 0.99);
+      const entryMax = smartFormat(entryPrice * 1.01);
+
+      // حساب الأهداف
+      const t1 = smartFormat(entryPrice * (1 + rates.t1 / 100));
+      const t2 = smartFormat(entryPrice * (1 + rates.t2 / 100));
+      const t3 = smartFormat(entryPrice * (1 + rates.t3 / 100));
+      const t4 = smartFormat(entryPrice * (1 + rates.t4 / 100));
+      const tl = smartFormat(entryPrice * (1 + rates.tl / 100));
+
+      // حساب وقف الخسارة
+      const sl_candle = smartFormat(entryPrice * (1 - rates.sl_candle / 100));
+      const sl_instant = smartFormat(entryPrice * (1 - rates.sl_instant / 100));
+
+      // صياغة كليشة "الساعي للكريبتو"
+      const template = 
+`**ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ**
+      الساعي للكريبتو ★★★ alsay_co
+**ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ**
+
+🪙 العملة : \`${symbol}\`
+🕰 وقت الدخول : الآن 
+🔷 منطقة الدخول : \`${entryMin}\` - \`${entryMax}\`
+
+ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+🎯 الاهداف :
+ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+🥉الهدف الاول  (+${rates.t1.toFixed(1)}%) »» \`${t1}\`
+🥈 الهدف الثاني (+${rates.t2.toFixed(1)}%) »» \`${t2}\`
+🥇 الهدف الثالث (+${rates.t3.toFixed(1)}%) »» \`${t3}\`
+🏆 الهدف الرابع  (+${rates.t4.toFixed(1)}%) »» \`${t4}\`
+🚀 الهدف الاخير (+${rates.tl.toFixed(1)}%) »» \`${tl}\`
+
+ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+🚫 وقف الخسارة :
+ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+🕯 إغلاق شمعة 4H عند (-${rates.sl_candle.toFixed(1)}%) »» \`${sl_candle}\`
+🚧 وقف خسارة لحظي (-${rates.sl_instant.toFixed(1)}%) »» \`${sl_instant}\`
+
+**ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ**
+        **✨ نسأل الله التوفيق للجميع ✨**
+**ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ**`;
+
+      // عرض الكليشة ورقعة النمط
+      document.getElementById('outputTemplate').innerText = template;
+      document.getElementById('modeBadge').innerText = rates.name;
+      document.getElementById('resultCard').classList.remove('hidden');
+
+      // التمرير السلس للأسفل
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // دالة نسخ النص للحافظة
+    function copyTemplate() {
+      const textToCopy = document.getElementById('outputTemplate').innerText;
+      
+      const textarea = document.createElement('textarea');
+      textarea.value = textToCopy;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        document.execCommand('copy');
+        showToast();
+      } catch (err) {
+        alert('تعذر النسخ التلقائي، يمكنك تحديد النص ونسخه يدوياً');
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    // إظهار التنبيه العائم عند النسخ
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.className = 'toast show';
+      setTimeout(() => { 
+        toast.className = toast.className.replace('toast show', 'toast'); 
+      }, 2500);
+    }
+  </script>
+</body>
+                </html>
+                
